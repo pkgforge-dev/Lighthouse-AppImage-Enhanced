@@ -1,0 +1,21 @@
+diff --git a/src/core1/graphics_thread.c b/src/core1/graphics_thread.c
+index d041c9d..d443186 100644
+--- a/src/core1/graphics_thread.c
++++ b/src/core1/graphics_thread.c
+@@ -496,6 +496,16 @@ void thread5_entry(void *arg) {
+         }
+         ThreadWatchdog_Beat(WATCHDOG_THREAD5); // [port] one beat per serviced message
+         thread5_checkAndExecutePreNMI();
++        // [patch] Guard against a polluted OSMesg union. Event words arrive in
++        // .data32 and must read back through .ptr as a small value, but a stray
++        // write that stamps only the low half of the slot leaves .ptr looking
++        // like a task pointer and the branch below dereferences it, crashing
++        // thread5. Task types are 0,1,2,7, so an id in the event range (3..13,
++        // minus 7) can never belong to a task; rebuild the union in that case.
++        if (msg.data32 >= THREAD5_MESSAGE_EVENT_SYNC && msg.data32 <= THREAD5_MESSAGE_EVENT_CONT_TIMER &&
++            msg.data32 != UCODE_TASK_TYPE_FRAMEBUFFER_CHANGED && (uintptr_t)msg.ptr != msg.data32) {
++            msg.ptr = (void *)(uintptr_t)msg.data32;
++        }
+         if ((uintptr_t)msg.ptr < 100) {
+             if (msg.data32 == THREAD5_MESSAGE_EVENT_SYNC) { thread5_handleSyncEvent(); }
+             else if (msg.data32 == THREAD5_MESSAGE_EVENT_VI_RETRACE)  { thread5_handleVIRetraceEvent(); }
