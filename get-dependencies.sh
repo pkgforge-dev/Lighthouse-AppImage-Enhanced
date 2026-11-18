@@ -30,7 +30,6 @@ echo "$VERSION" > ~/version
 
 mkdir -p ./AppDir/bin
 cd ./Lighthouse
-#patch -Np1 -i ../thread5-mesg-guard.patch
 
 cmake ./ -Bbuild -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 cmake --build build --config Release
